@@ -1,4 +1,4 @@
-name: Node.js CI with SonarCloud
+name: Node.js CI/CD with SonarCloud
 
 on:
   push:
@@ -9,35 +9,80 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      security-events: write
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      # 1. Checkout code with full history (required for SonarCloud)
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      # 2. Setup Node.js with built-in caching
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
 
-    - name: Install dependencies
-      run: npm ci
+      # 3. Install dependencies safely
+      - name: Install dependencies
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+          fi
 
-    - name: Run tests with coverage
-      run: npm test -- --coverage
+      # 4. Run tests with coverage
+      - name: Run tests with coverage
+        run: npm test -- --coverage
 
-    - name: SonarCloud Scan
-      uses: SonarSource/sonarcloud-github-action@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      with:
-        args: >
-          -Dsonar.organization=ddaryb
-          -Dsonar.projectKey=ddaryb_my-js-project
-          -Dsonar.projectName=my-js-project
-          -Dsonar.sources=.
-          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-          -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/dist/**
-          -Dsonar.coverage.exclusions=**/test/**,**/mock/**
+      # 5. Verify coverage file exists
+      - name: Check coverage file
+        run: |
+          if [ ! -f "coverage/lcov.info" ]; then
+            echo "Error: coverage file not found!"
+            exit 1
+          fi
+          echo "Coverage file exists"
+
+      # 6. SonarCloud Scan (optimized configuration)
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=ddaryb
+            -Dsonar.projectKey=ddaryb_my-js-project
+            -Dsonar.projectName=my-js-project
+            -Dsonar.sources=.
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/dist/**
+            -Dsonar.coverage.exclusions=**/test/**,**/mock/**
+            -Dsonar.ci.enabled=true
+            -Dsonar.ci.autoconfig.disabled=true
+            -Dsonar.scm.provider=git
+            -Dsonar.sourceEncoding=UTF-8
+
+      # 7. Upload coverage as artifact (optional)
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+          retention-days: 5
+
+      # 8. Final status
+      - name: Show results
+        run: |
+          echo "===================================="
+          echo "CI/CD pipeline completed successfully!"
+          echo "View SonarCloud report: https://sonarcloud.io/dashboard?id=ddaryb_my-js-project"
+          echo "Job duration: ${{ job.status }}"
+          echo "===================================="

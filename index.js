@@ -1,3 +1,4 @@
-const getDate = () => `Hello, World! Time: ${new Date().toLocaleDateString()}`
+const getDate = () => `Hello, World! Time: ${new Date().toLocaleDateString()}`;
 
-console.log(getDate());
+// Экспорт функции для тестов
+module.exports = { getDate };

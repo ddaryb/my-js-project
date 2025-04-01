@@ -2,58 +2,54 @@ name: Node.js CI/CD with SonarCloud
 
 on:
   push:
-    branches:
-      - main  # Запускать при пуше в main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main  # Запускать при PR в main
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Клонируем репозиторий
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # 1. Checkout code
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Необходимо для SonarCloud анализа
 
-      # 2. Настраиваем Node.js
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # 2. Setup Node.js with caching
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      # 3. Устанавливаем зависимости
+      # 3. Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 4. Кэшируем зависимости (ускорение работы CI/CD)
-      - name: Cache Node.js modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      # 5. Запуск тестов
-      - name: Run tests with coverage
+      # 4. Run tests with coverage
+      - name: Run tests
         run: npm test -- --coverage
 
-      # 6. Анализ кода с SonarCloud
+      # 5. SonarCloud Scan (оптимизированная версия)
       - name: SonarCloud Scan
+        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
         uses: SonarSource/sonarcloud-github-action@v2
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Автоматически доступен
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.organization=ТВОЯ_ОРГАНИЗАЦИЯ
-            -Dsonar.projectKey=ТВОЙ_ПРОЕКТ
-            -Dsonar.sources=.
+            -Dsonar.organization=<your-organization>
+            -Dsonar.projectKey=<your-project-key>
+            -Dsonar.projectName=<your-project-name>
+            -Dsonar.sources=src
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/dist/**
+            -Dsonar.coverage.exclusions=**/test/**,**/mock/**
 
-      # 7. Завершение работы CI (если нужно)
-      - name: Finish CI
-        run: echo "Build and analysis completed successfully!"
-
+      # 6. Optional status check
+      - name: Check SonarCloud status
+        if: always()
+        run: |
+          echo "SonarCloud analysis completed"
+          echo "View results at: https://sonarcloud.io/dashboard?id=${{ secrets.SONAR_PROJECT_KEY }}"

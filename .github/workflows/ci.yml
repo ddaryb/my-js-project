@@ -43,7 +43,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.organization=https://sonarcloud.io/organizations/ddaryb
+            -Dsonar.organization=ddaryb
             -Dsonar.projectKey=my-js-project
             -Dsonar.projectName=my-js-project
             -Dsonar.sources=.  # Changed from 'src' to '.' to scan current directory

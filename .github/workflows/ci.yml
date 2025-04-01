@@ -7,9 +7,9 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  analyze:
+    name: SonarCloud Scan
     runs-on: ubuntu-latest
-    environment: production
     permissions:
       contents: read
       issues: write
@@ -17,32 +17,23 @@ jobs:
       security-events: write
 
     steps:
-      # 1. Checkout code with full history
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required for SonarCloud analysis
+          fetch-depth: 0
 
-      # 2. Setup Node.js with caching
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      # 3. Install dependencies safely
       - name: Install dependencies
-        run: |
-          if [ -f "package-lock.json" ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm ci
 
-      # 4. Run tests with coverage
-      - name: Run tests with coverage
+      - name: Build and test
         run: npm test -- --coverage
 
-      # 5. Verify coverage file exists
-      - name: Check coverage file
+      - name: Verify coverage
         run: |
           if [ ! -f "coverage/lcov.info" ]; then
             echo "Error: coverage file not found!"
@@ -50,7 +41,6 @@ jobs:
           fi
           echo "Coverage file exists"
 
-      # 6. SonarCloud Scan with forced CI mode
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
@@ -67,26 +57,16 @@ jobs:
             -Dsonar.coverage.exclusions=**/test/**,**/mock/**
             -Dsonar.ci.enabled=true
             -Dsonar.ci.autoconfig.disabled=true
-            -Dsonar.analysis.ci=true
-            -Dsonar.analysis.autoconfig.disabled=true
             -Dsonar.scm.provider=git
             -Dsonar.sourceEncoding=UTF-8
-            -X  # Enable debug mode
+            -X
 
-      # 7. Upload coverage as artifact
-      - name: Upload coverage report
+      - name: Upload results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
-          path: coverage
-          retention-days: 5
-
-      # 8. Final status
-      - name: Show results
-        if: always()
-        run: |
-          echo "===================================="
-          echo "CI/CD pipeline completed successfully!"
-          echo "View SonarCloud report: https://sonarcloud.io/dashboard?id=ddaryb_my-js-project"
-          echo "Job duration: ${{ job.status }}"
-          echo "===================================="
+          name: sonar-report
+          path: |
+            coverage/
+            .scannerwork/
+          retention-days: 3

@@ -1,4 +1,4 @@
-name: Node.js CI/CD
+name: Node.js CI/CD with SonarCloud
 
 on:
   push:
@@ -22,8 +22,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
-      # 3. Кэшируем зависимости (чтобы ускорить сборку)
+      # 3. Устанавливаем зависимости
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Кэшируем зависимости (ускорение работы CI/CD)
       - name: Cache Node.js modules
         uses: actions/cache@v4
         with:
@@ -32,10 +37,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # 4. Устанавливаем зависимости
-      - name: Install dependencies
-        run: npm ci
+      # 5. Запуск тестов
+      - name: Run tests
+        run: npm test
 
-      # 5. Собираем и тестируем проект
-      - name: Run build
-        run: node index.js
+      # 6. Анализ кода с SonarCloud
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=ТВОЯ_ОРГАНИЗАЦИЯ
+            -Dsonar.projectKey=ТВОЙ_ПРОЕКТ
+            -Dsonar.sources=.
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+
+      # 7. Завершение работы CI (если нужно)
+      - name: Finish CI
+        run: echo "Build and analysis completed successfully!"
+

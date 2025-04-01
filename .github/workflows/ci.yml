@@ -30,16 +30,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build and test
+      - name: Run tests with coverage
         run: npm test -- --coverage
 
-      - name: Verify coverage
+      - name: Verify coverage file
         run: |
           if [ ! -f "coverage/lcov.info" ]; then
             echo "Error: coverage file not found!"
             exit 1
           fi
           echo "Coverage file exists"
+
+      - name: Clear Sonar cache
+        run: rm -rf ~/.sonar/cache
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
@@ -59,14 +62,12 @@ jobs:
             -Dsonar.ci.autoconfig.disabled=true
             -Dsonar.scm.provider=git
             -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.analysis.ci=true
+            -Dsonar.analysis.autoconfig.disabled=true
             -X
 
-      - name: Upload results
+      - name: Check results
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: sonar-report
-          path: |
-            coverage/
-            .scannerwork/
-          retention-days: 3
+        run: |
+          echo "SonarCloud analysis completed"
+          echo "View results at: https://sonarcloud.io/dashboard?id=ddaryb_my-js-project"

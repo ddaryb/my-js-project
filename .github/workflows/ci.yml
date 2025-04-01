@@ -41,16 +41,7 @@ jobs:
           fi
           echo "Coverage file exists"
 
-      - name: Clear Sonar cache
-        run: rm -rf ~/.sonar/cache
-
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
+        uses: SonarSource/sonarcloud-github-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        
-      - name: Check results
-        if: always()
-        run: |
-          echo "SonarCloud analysis completed"
-          echo "View results at: https://sonarcloud.io/dashboard?id=ddaryb_my-js-project"

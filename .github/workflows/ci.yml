@@ -1,20 +1,41 @@
+name: Node.js CI/CD
+
+on:
+  push:
+    branches:
+      - main  # Запускать при пуше в main
+  pull_request:
+    branches:
+      - main  # Запускать при PR в main
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      # 1. Клонируем репозиторий
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Настраиваем Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
-      - name: Cache dependencies
+          node-version: "20"
+
+      # 3. Кэшируем зависимости (чтобы ускорить сборку)
+      - name: Cache Node.js modules
         uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
+
+      # 4. Устанавливаем зависимости
       - name: Install dependencies
         run: npm ci
+
+      # 5. Собираем и тестируем проект
       - name: Run build
         run: node index.js

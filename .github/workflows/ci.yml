@@ -17,12 +17,12 @@ jobs:
       security-events: write
 
     steps:
-      # 1. Checkout code with full history (required for SonarCloud)
+      # 1. Checkout code with full history
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Required for SonarCloud analysis
 
-      # 2. Setup Node.js with built-in caching
+      # 2. Setup Node.js with caching
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -50,7 +50,7 @@ jobs:
           fi
           echo "Coverage file exists"
 
-      # 6. SonarCloud Scan (optimized configuration)
+      # 6. SonarCloud Scan with forced CI mode
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
@@ -67,10 +67,13 @@ jobs:
             -Dsonar.coverage.exclusions=**/test/**,**/mock/**
             -Dsonar.ci.enabled=true
             -Dsonar.ci.autoconfig.disabled=true
+            -Dsonar.analysis.ci=true
+            -Dsonar.analysis.autoconfig.disabled=true
             -Dsonar.scm.provider=git
             -Dsonar.sourceEncoding=UTF-8
+            -X  # Enable debug mode
 
-      # 7. Upload coverage as artifact (optional)
+      # 7. Upload coverage as artifact
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -80,6 +83,7 @@ jobs:
 
       # 8. Final status
       - name: Show results
+        if: always()
         run: |
           echo "===================================="
           echo "CI/CD pipeline completed successfully!"
